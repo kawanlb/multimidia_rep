@@ -1,11 +1,61 @@
 import { Radio, Waves, Minimize2, FileAudio, Lightbulb, HelpCircle, Play } from 'lucide-react';
 import { Section } from '../App';
+import { useRef, useEffect } from 'react';
+import MidiPlayer from 'midi-player-js';
+import Soundfont from 'soundfont-player';
 
 interface HomeProps {
   onNavigate: (section: Section) => void;
 }
 
 export function Home({ onNavigate }: HomeProps) {
+  const playerRef = useRef<MidiPlayer.Player | null>(null);
+  const instrumentRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Inicializar o player MIDI
+    playerRef.current = new MidiPlayer.Player();
+    
+    // Carregar o soundfont (piano acústico)
+    Soundfont.instrument(new AudioContext(), 'acoustic_grand_piano').then((instrument) => {
+      instrumentRef.current = instrument;
+    });
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.stop();
+      }
+    };
+  }, []);
+
+  const handlePlayAudio = async () => {
+    try {
+      if (!playerRef.current || !instrumentRef.current) {
+        console.error('Player ou instrumento não inicializado');
+        return;
+      }
+
+      // Buscar o arquivo MIDI
+      const response = await fetch('/src/components/midias_obrigatorias/aula.mid');
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Carregar o arquivo no player
+      playerRef.current.loadArrayBuffer(arrayBuffer);
+      
+      // Configurar o callback para tocar as notas
+      playerRef.current.on('midiEvent', (event: any) => {
+        if (event.name === 'Note on' && event.velocity > 0) {
+          instrumentRef.current.play(event.noteName, 0, { gain: event.velocity / 100 });
+        }
+      });
+
+      // Iniciar a reprodução
+      playerRef.current.play();
+    } catch (error) {
+      console.error('Erro ao reproduzir áudio MIDI:', error);
+    }
+  };
+
   const modules = [
     {
       id: 'o-que-e' as Section,
@@ -78,7 +128,7 @@ export function Home({ onNavigate }: HomeProps) {
       <div className="flex justify-center mt-10">
         <button
           className="flex items-center gap-4 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-full px-6 py-3 shadow transition-all duration-300 transform hover:scale-105"
-          onClick={() => console.log("Botão player clicado")}
+          onClick={handlePlayAudio}
         >
           <Play className="w-6 h-6 text-gray-700" />
           <span className="text-gray-700 font-medium">Teste seu fone</span>
