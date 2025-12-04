@@ -36,7 +36,7 @@ export function Home({ onNavigate }: HomeProps) {
       }
 
       // Buscar o arquivo MIDI
-      const response = await fetch('/src/components/midias_obrigatorias/aula.mid');
+      const response = await fetch('/aula.mid');
       const arrayBuffer = await response.arrayBuffer();
       
       // Carregar o arquivo no player
